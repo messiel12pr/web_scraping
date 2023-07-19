@@ -5,6 +5,7 @@ import numpy as np
 import requests
 from datetime import datetime, timedelta
 from collections import defaultdict
+import csv
 
 @dataclass
 class Coin_info:
@@ -41,15 +42,41 @@ def get_coin_info(soup, coins):
 
     return coin
 
+def convert_to_list_of_dicts(coin_dict):
+    result = []
+    for coin_name, coin_info_list in coin_dict.items():
+        for coin_info in coin_info_list:
+            coin_data = {
+                'coin_name': coin_name,
+                'value': coin_info.value,
+                'date': coin_info.date
+            }
+            result.append(coin_data)
+    return result
+
+def dict_to_csv(coin_list_of_dicts):
+    with open('data.csv', mode='w', newline='') as file:
+        writer = csv.DictWriter(file, fieldnames=['coin_name', 'value', 'date'])
+        writer.writeheader()
+        writer.writerows(coin_list_of_dicts)
+
+def csv_to_dict(coin_list_of_dicts):
+    result_dict = {}
+    for coin_data in coin_list_of_dicts:
+        coin_name = coin_data['coin_name']
+        value = coin_data['value']
+        date = coin_data['date']
+
+        if coin_name not in result_dict:
+            result_dict[coin_name] = []
+
+        result_dict[coin_name].append(Coin_info(value, date))
+    return result_dict
+
 def main():
     url = "https://www.coingecko.com"
     header = ({"User-Agent": "Mozilla/5.0 (iPad; CPU OS 12_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148"}) 
 
     coins = ['Bitcoin', 'Ethereum', 'Tether', 'Cardano', 'Solana']
-
-    soup = initialize_soup(url, header)
-    coin = get_coin_info(soup, coins)
-
-    print(coin)
 
 main()

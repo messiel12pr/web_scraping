@@ -7,11 +7,11 @@ from datetime import datetime, timedelta
 from collections import defaultdict
 
 @dataclass
-class Point:
+class Coin_info:
     value: float
-    date: float
+    date: str
 
-coin_info = defaultdict(list)
+coin = defaultdict(list)
 
 coins = ['Bitcoin', 'Ethereum', 'Tether', 'Cardano', 'Solana']
 URL = "https://www.coingecko.com"
@@ -34,7 +34,5 @@ for i in range(len(section)):
 
     if(coin_name and coin_value and (coin_name.text.strip() in coins)):
         # Parsing and storing coin info
-        coin_value_parsed = float(coin_value.text.replace('$', '').replace(',', '').strip())
-        coin_info[coin_name.text.strip()].append(Point(coin_value_parsed, current_date))
-
-
+        parsed_value = float(coin_value.text.replace('$', '').replace(',', '').strip())
+        coin[coin_name.text.strip()].append(Coin_info(parsed_value, current_date))

@@ -4,14 +4,15 @@ import matplotlib.pyplot as plt
 import numpy as np
 import requests
 from datetime import datetime, timedelta
+import time
 from collections import defaultdict
 import csv
-import time
 
 @dataclass
 class Coin_info:
     value: float
     date: str
+    time: str
 
 def initialize_soup(url, header):
     soup = None
@@ -32,13 +33,14 @@ def get_coin_info(soup, coins, coin_dict):
     for i in range(len(section)):
         now = datetime.now()
         current_date = now.strftime("%Y-%m-%d")
+        current_time = time.strftime("%H:%M:%S", time.localtime())
         coin_name = section[i].find('span', class_='lg:tw-flex font-bold tw-items-center tw-justify-between')
         coin_value = section[i].find('span', class_='no-wrap')
 
         if(coin_name and coin_value and (coin_name.text.strip() in coins)):
             # Parsing and storing coin info
             parsed_value = float(coin_value.text.replace('$', '').replace(',', '').strip())
-            coin_dict[coin_name.text.strip()].append(Coin_info(parsed_value, current_date))
+            coin_dict[coin_name.text.strip()].append(Coin_info(parsed_value, current_date, current_time))
 
     return coin_dict
 
@@ -49,14 +51,15 @@ def convert_to_list_of_dicts(coin_dict):
             coin_data = {
                 'coin_name': coin_name,
                 'value': coin_info.value,
-                'date': coin_info.date
+                'date': coin_info.date,
+                'time': coin_info.time
             }
             result.append(coin_data)
     return result
 
 def dict_to_csv(coin_list_of_dicts):
     with open('data.csv', mode='w', newline='') as file:
-        writer = csv.DictWriter(file, fieldnames=['coin_name', 'value', 'date'])
+        writer = csv.DictWriter(file, fieldnames=['coin_name', 'value', 'date', 'time'])
         writer.writeheader()
         writer.writerows(coin_list_of_dicts)
 
@@ -71,11 +74,22 @@ def csv_to_dict(coin_dict):
         coin_name = coin_data['coin_name']
         value = coin_data['value']
         date = coin_data['date']
+        time = coin_data['time']
 
         if coin_name not in coin_dict:
             coin_dict[coin_name] = []
 
-        coin_dict[coin_name].append(Coin_info(value, date))
+        # Make sure we put duplicates in the dict values for a given key
+        coin_info_arr = coin_dict[coin_name]
+        flag = False
+        for i in coin_info_arr:
+            if i.date == date and i.time == time:
+                flag = True
+                break
+        
+        if not flag:
+            coin_dict[coin_name].append(Coin_info(value, date, time))
+
     return coin_dict
 
 def main():
@@ -87,6 +101,8 @@ def main():
 
     # Testing functionality:
 
+    # Retrieve saved data in csv 
+    coin_dict = csv_to_dict(coin_dict)
     # Scrape data onto dictionary
     coin_dict = get_coin_info(soup, coins, coin_dict)
     # Convert dictionary to list of dictionaries
@@ -96,7 +112,7 @@ def main():
 
     print(coin_dict)
 
-    time.sleep(300)
+    time.sleep(30)
 
     # Retrieve saved data in csv 
     coin_dict = csv_to_dict(coin_dict)

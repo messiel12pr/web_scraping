@@ -6,6 +6,7 @@ import requests
 from datetime import datetime, timedelta
 from collections import defaultdict
 import csv
+import time
 
 @dataclass
 class Coin_info:
@@ -25,8 +26,7 @@ def initialize_soup(url, header):
 
     return soup
 
-def get_coin_info(soup, coins):
-    coin = defaultdict(list)
+def get_coin_info(soup, coins, coin_dict):
     section = soup.find_all('tr')
 
     for i in range(len(section)):
@@ -38,9 +38,9 @@ def get_coin_info(soup, coins):
         if(coin_name and coin_value and (coin_name.text.strip() in coins)):
             # Parsing and storing coin info
             parsed_value = float(coin_value.text.replace('$', '').replace(',', '').strip())
-            coin[coin_name.text.strip()].append(Coin_info(parsed_value, current_date))
+            coin_dict[coin_name.text.strip()].append(Coin_info(parsed_value, current_date))
 
-    return coin
+    return coin_dict
 
 def convert_to_list_of_dicts(coin_dict):
     result = []
@@ -60,23 +60,53 @@ def dict_to_csv(coin_list_of_dicts):
         writer.writeheader()
         writer.writerows(coin_list_of_dicts)
 
-def csv_to_dict(coin_list_of_dicts):
-    result_dict = {}
+def csv_to_dict(coin_dict):
+    coin_list_of_dicts = []
+    with open('data.csv', mode='r') as file:
+        reader = csv.DictReader(file)
+        for row in reader:
+            coin_list_of_dicts.append(row)
+
     for coin_data in coin_list_of_dicts:
         coin_name = coin_data['coin_name']
         value = coin_data['value']
         date = coin_data['date']
 
-        if coin_name not in result_dict:
-            result_dict[coin_name] = []
+        if coin_name not in coin_dict:
+            coin_dict[coin_name] = []
 
-        result_dict[coin_name].append(Coin_info(value, date))
-    return result_dict
+        coin_dict[coin_name].append(Coin_info(value, date))
+    return coin_dict
 
 def main():
     url = "https://www.coingecko.com"
     header = ({"User-Agent": "Mozilla/5.0 (iPad; CPU OS 12_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148"}) 
-
     coins = ['Bitcoin', 'Ethereum', 'Tether', 'Cardano', 'Solana']
+    soup = initialize_soup(url, header)
+    coin_dict = defaultdict(list)
+
+    # Testing functionality:
+
+    # Scrape data onto dictionary
+    coin_dict = get_coin_info(soup, coins, coin_dict)
+    # Convert dictionary to list of dictionaries
+    coin_list_of_dicts = convert_to_list_of_dicts(coin_dict)
+    # Save list of dictionaries into csv
+    dict_to_csv(coin_list_of_dicts)
+
+    print(coin_dict)
+
+    time.sleep(300)
+
+    # Retrieve saved data in csv 
+    coin_dict = csv_to_dict(coin_dict)
+    # Scrape data onto dictionary
+    coin_dict = get_coin_info(soup, coins, coin_dict)
+    # Convert dictionary to list of dictionaries
+    coin_list_of_dicts = convert_to_list_of_dicts(coin_dict)
+    # Save list of dictionaries into csv
+    dict_to_csv(coin_list_of_dicts)
+
+    print(coin_dict)
 
 main()
